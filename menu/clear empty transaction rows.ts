@@ -1,7 +1,4 @@
-import { documentLock } from "../lock";
-import { getReferenceRanges } from "../utils";
-
-export function clearEmptyTransactionRows() { documentLock(_clearEmptyTransactionRows) }
+function clearEmptyTransactionRows() { documentLock(_clearEmptyTransactionRows) }
 function _clearEmptyTransactionRows() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 

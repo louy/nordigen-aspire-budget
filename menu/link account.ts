@@ -1,7 +1,4 @@
-import { scriptLock } from "../lock";
-import { getAccessToken, INSTITUTIONS_SHEET_NAME, nordigenRequest, REQUISITIONS_SHEET_NAME } from "../utils";
-
-export function linkAccount() { scriptLock(_linkAccount) }
+function linkAccount() { scriptLock(_linkAccount) }
 function _linkAccount() {
   const ui = SpreadsheetApp.getUi();
   

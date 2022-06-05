@@ -1,6 +1,3 @@
-import { scriptLock } from "../lock";
-import { ACCOUNTS_SHEET_NAME, getAccessToken, getReferenceRanges, nordigenRequest, REQUISITIONS_SHEET_NAME } from "../utils";
-
 function loadAccounts() { scriptLock(_loadAccounts) }
 function _loadAccounts() {
   // console.log('loadAccounts')
@@ -108,7 +105,7 @@ function updateAccount(accountsSheet: GoogleAppsScript.Spreadsheet.Sheet, {
   id, details, lastFetched, lastBalance, lastBalanceDate,
   currency, displayName, product, ownerName, bban, maskedPan, institutionId,
 }: Partial<{
-  id: string, details: string, lastFetched: string, lastBalance: number, lastBalanceDate: string,
+  id: string, details: string, lastFetched: string, lastBalance: number|string, lastBalanceDate: string,
   currency: string, displayName: string, product: string, ownerName: string, bban: string, maskedPan: string, institutionId: string,
 }>) {
   const rowNumber = getRowForAccount(accountsSheet, id);

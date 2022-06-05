@@ -12,7 +12,7 @@ function _loadTransactions() {
   const ui = SpreadsheetApp.getUi();
 
   function needGracefulShutdown() {
-    if (new Date() - scriptStart > MAX_EXECUTION_TIME) {
+    if (+new Date() - +scriptStart > MAX_EXECUTION_TIME) {
       ui.alert('Script running out of time but there\'s still data to process. Please run the script again')
       return true
     }
@@ -35,8 +35,6 @@ function _loadTransactions() {
 
   let accounts = getAccounts(accountsSheet)
 
-  // console.log({accounts})
-
   const {
     v_ApprovedSymbol, 
     v_PendingSymbol, 
@@ -54,7 +52,7 @@ function _loadTransactions() {
     trx_Inflows,
   } = getReferenceRanges(spreadsheet);
 
-  function getFirstEmptyRow(range) {
+  function getFirstEmptyRow(range: GoogleAppsScript.Spreadsheet.Range) {
     return (
       (parseInt(
         Object.entries(range.getValues())
@@ -75,13 +73,12 @@ function _loadTransactions() {
   let txnRowNumber = prevRowNumber
 
   const prevUuids = trx_Uuids.getValues().map(([cell]) => cell);
-  // console.log(prevUuids)
 
   let warned_about_name = true // FIXME - false
 
-  const accountRows = trx_Accounts.getValues().map(([cell]) => cell);
-  const dateRows = trx_Dates.getValues().map(([cell]) => cell);
-  const statusRows = trx_Statuses.getValues().map(([cell]) => cell);
+  const prevAccountRows: string[] = trx_Accounts.getValues().map(([cell]) => cell);
+  const prevDateRows: Date[] = trx_Dates.getValues().map(([cell]) => cell);
+  const prevStatusRows: string[] = trx_Statuses.getValues().map(([cell]) => cell);
 
   for (const {id: accountId, name: accountName, institutionId} of accounts) {
     if (needGracefulShutdown()) return;
@@ -90,7 +87,15 @@ function _loadTransactions() {
         Authorization: "Bearer " + accessToken,
       },
     })
-    const {balances} = nordigenRequest('/api/v2/accounts/'+encodeURIComponent(accountId)+'/balances/', {
+    const {balances} = nordigenRequest<
+    {
+      balances: {
+        balanceAmount: {amount: string,},
+        referenceDate: string,
+        balanceType: string,
+      }[]
+    }
+  >('/api/v2/accounts/'+encodeURIComponent(accountId)+'/balances/', {
       headers: {
         Authorization: "Bearer " + accessToken,
       },
@@ -118,13 +123,13 @@ function _loadTransactions() {
       continue;
     }
 
-    const accountDates = dateRows
+    const accountDates = prevDateRows
       .filter((_,index) => 
-        accountRows[index] === accountName &&
-        (statusRows[index] === v_ApprovedSymbol || statusRows[index] === v_BreakSymbol)
+        prevAccountRows[index] === accountName &&
+        (prevStatusRows[index] === v_ApprovedSymbol || prevStatusRows[index] === v_BreakSymbol)
       )
-      .filter(v => !!v)
-      .filter((v,idx,arr) => arr.indexOf(v)===idx);
+      .filter(v => !!v);
+      // .filter((v,idx,arr) => arr.indexOf(v)===idx); // Dedupe will only work if this is cast to string
 
 
     let max_historical_days = FETCH_PERIOD_START_DAYS_AGO;
@@ -143,7 +148,7 @@ function _loadTransactions() {
     // start & end date
     const today = formatDate(new Date());
     const startDate = accountDates.length 
-      ? formatDate(new Date(Math.max(...accountDates)))
+      ? formatDate(new Date(Math.max(...accountDates.map(d=>+d))))
       : formatDate(addDays(new Date(), -max_historical_days))
     const endDate = minDate(
       formatDate(addDays(parseDate(startDate), FETCH_PERIOD_LENGTH_DAYS)),
@@ -179,7 +184,7 @@ function _loadTransactions() {
         date: transaction.valueDate || transaction.bookingDate,
         amount: transaction.transactionAmount.amount,
         account: accountName,
-        status: v_ApprovedSymbol,
+        status: v_ApprovedSymbol as string,
         memo: [
           transaction.transactionAmount.amount > 0 ? transaction.debtorName : transaction.creditorName, 
           transaction.remittanceInformationUnstructured,
@@ -199,10 +204,10 @@ function _loadTransactions() {
         (!balance.referenceDate || balance.referenceDate === today)
       ) {
         // Check for an already existing starting balance, create one or do a balance adjustment
-        const inflowRows = trx_Inflows.getValues().map(([cell]) => cell);
-        const accountRows = trx_Accounts.getValues().map(([cell]) => cell);
-        const dateRows = trx_Dates.getValues().map(([cell]) => cell);
-        const categoryRows = trx_Categories.getValues().map(([cell]) => cell);
+        const inflowRows:number[] = trx_Inflows.getValues().map(([cell]) => cell);
+        const accountRows:string[] = trx_Accounts.getValues().map(([cell]) => cell);
+        const dateRows:Date[] = trx_Dates.getValues().map(([cell]) => cell);
+        const categoryRows:string[] = trx_Categories.getValues().map(([cell]) => cell);
         
         const expectedBalance = parseFloat(balance.balanceAmount.amount);
         let startingBalance = inflowRows
@@ -231,11 +236,11 @@ function _loadTransactions() {
           if (startingBalance != null) {
             // Account already has a starting balance, make an adjustment
             updateTransaction(spreadsheet, txnRowNumber ++, {
-              date: balance.referenceDate,
-              category: v_BalanceAdjustment,
+              date: balance.referenceDate || today,
+              category: v_BalanceAdjustment as string,
               amount: expectedBalance - currentBalance,
               account: accountName,
-              status: v_ApprovedSymbol,
+              status: v_ApprovedSymbol as string,
             });
           } else {
             // Create a starting balance for the account
@@ -249,10 +254,10 @@ function _loadTransactions() {
 
             updateTransaction(spreadsheet, txnRowNumber ++, {
               date: firstTransactionDate,
-              category: v_StartingBalance,
+              category: v_StartingBalance as string,
               amount: expectedBalance - currentBalance,
               account: accountName,
-              status: v_ApprovedSymbol,
+              status: v_ApprovedSymbol as string,
             });
           }
         }
@@ -284,7 +289,7 @@ function _loadTransactions() {
         updateTransaction(spreadsheet, txnRowNumber ++, {
           date: endDate,
           account: accountName,
-          status: v_BreakSymbol,
+          status: v_BreakSymbol as string,
           memo: "Sync marker. Please don't remove"
         });
       }
@@ -303,7 +308,19 @@ function _loadTransactions() {
   }
 }
 
-function updateTransaction(spreadsheet, rowNumber, {date, category, amount, account, status, memo, uuid}) {
+function updateTransaction(
+  spreadsheet:GoogleAppsScript.Spreadsheet.Spreadsheet, 
+  rowNumber: number, 
+  {date, category, amount, account, status, memo, uuid}: Partial<{
+    date: string,
+    category: string,
+    amount: number,
+    account: string,
+    status: string,
+    memo: string,
+    uuid: string,
+  }>
+) {
   const {
     trx_Dates,
     trx_Categories,

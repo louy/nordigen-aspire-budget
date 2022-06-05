@@ -1,9 +1,9 @@
-export function onInstall() {
+function onInstall() {
   onOpen();
   // Perform additional setup as needed.
 }
 
-export function onOpen() {
+function onOpen() {
   SpreadsheetApp.getUi().createAddonMenu()
     .addItem('Initialise', 'initialise')
     .addItem('Load institutions', 'loadInstitutions')

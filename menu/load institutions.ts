@@ -1,6 +1,3 @@
-import { scriptLock } from "../lock";
-import { getAccessToken, getReferenceRanges, INSTITUTIONS_SHEET_NAME, nordigenRequest } from "../utils";
-
 const ADD_LOGOS = false;
 
 function loadInstitutions() { scriptLock(_loadInstitutions) }
