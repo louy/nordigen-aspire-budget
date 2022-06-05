@@ -282,8 +282,7 @@ function _loadTransactions() {
 
       if (
         !lastTransactionDate || 
-        (lastTransactionDate === startDate && startDate !== endDate)
-        // dateDifferenceInDays(parseDate(lastTransactionDate), parseDate(endDate)) > FETCH_PERIOD_LENGTH_DAYS / 2
+        (lastTransactionDate === startDate && today !== endDate)
       ) {
         // Insert a break, to avoid requesting the same period when there are no transactions
         updateTransaction(spreadsheet, txnRowNumber ++, {
