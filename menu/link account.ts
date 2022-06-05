@@ -1,4 +1,7 @@
-function linkAccount() { scriptLock(_linkAccount) }
+import { scriptLock } from "../lock";
+import { getAccessToken, INSTITUTIONS_SHEET_NAME, nordigenRequest, REQUISITIONS_SHEET_NAME } from "../utils";
+
+export function linkAccount() { scriptLock(_linkAccount) }
 function _linkAccount() {
   const ui = SpreadsheetApp.getUi();
   
@@ -28,10 +31,10 @@ function _linkAccount() {
   const accessToken = getAccessToken();
   console.log({accessToken})
   
-  let agreementData;
+  let agreementData: {id: string} | null;
   {
     // Create an agreement for max access
-    const institutionsSheet = spreadsheet.getSheetByName(INSTITUTIONS_SHEET_NAME);
+    const institutionsSheet = spreadsheet.getSheetByName(INSTITUTIONS_SHEET_NAME)!;
     const institutionIdx = institutionsSheet.getRange(2, 1, institutionsSheet.getLastRow(), 1).getValues().map(([cell])=>cell)
       .indexOf(text);
 
@@ -63,7 +66,10 @@ function _linkAccount() {
 
   console.log({agreementData});
 
-  const data = nordigenRequest('/api/v2/requisitions/', {
+  const data = nordigenRequest<{
+    id: string,
+    status: string,
+  }>('/api/v2/requisitions/', {
     method: 'post',
     headers: {
       'Authorization': 'Bearer '+accessToken,

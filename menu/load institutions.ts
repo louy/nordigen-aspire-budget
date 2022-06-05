@@ -1,3 +1,6 @@
+import { scriptLock } from "../lock";
+import { getAccessToken, getReferenceRanges, INSTITUTIONS_SHEET_NAME, nordigenRequest } from "../utils";
+
 const ADD_LOGOS = false;
 
 function loadInstitutions() { scriptLock(_loadInstitutions) }
@@ -46,7 +49,12 @@ function _loadInstitutions() {
 
   const accessToken = getAccessToken();
 
-  const data = nordigenRequest('/api/v2/institutions/?country=' + encodeURIComponent(text || 'gb'), {
+  const data = nordigenRequest<{
+    id: string,
+    name: string,
+    transaction_total_days: number,
+    logo: string,
+  }[]>('/api/v2/institutions/?country=' + encodeURIComponent(text || 'gb'), {
     headers: {
       Authorization: "Bearer " + accessToken,
     },

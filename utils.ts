@@ -1,13 +1,15 @@
-const CONFIG_SHEET_NAME = 'NordigenData'
-const REFRESH_TOKEN_KEY = 'Refresh token'
+export const CONFIG_SHEET_NAME = 'NordigenData'
+export const REFRESH_TOKEN_KEY = 'Refresh token'
 
-const INSTITUTIONS_SHEET_NAME = 'NordigenInstitutions'
-const REQUISITIONS_SHEET_NAME = 'NordigenRequisitions'
-const ACCOUNTS_SHEET_NAME = 'NordigenAccounts'
+export const INSTITUTIONS_SHEET_NAME = 'NordigenInstitutions'
+export const REQUISITIONS_SHEET_NAME = 'NordigenRequisitions'
+export const ACCOUNTS_SHEET_NAME = 'NordigenAccounts'
 
-let config
+let config: [string, string][]
+export function _getConfig(): typeof config { return config; }
+export function _setConfig(value: typeof config) { config = value; }
 
-function nordigenRequest(url, {body, headers, ...options}) {
+export function nordigenRequest<T extends {}>(url: string, {headers, ...options}: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions): T {
   const request = UrlFetchApp.fetch("https://ob.nordigen.com" + url, {
     ...options,
     headers: {
@@ -19,7 +21,7 @@ function nordigenRequest(url, {body, headers, ...options}) {
   return data
 }
 
-function getAccessToken() {
+export function getAccessToken() {
   if (!config) {
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
     const configSheet = spreadsheet.getSheetByName('NordigenData')
@@ -28,13 +30,13 @@ function getAccessToken() {
       throw new Error("Nordigen integration has not been initialised. Please initialise first.")
     }
 
-    config = configSheet.getSheetValues(1, 1, configSheet.getLastRow(), 2)
+    config = configSheet.getSheetValues(1, 1, configSheet.getLastRow(), 2) as string[][] as typeof config
   }
 
   const refreshToken = config.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1]
   if (!refreshToken) throw new Error("Missing refresh token from data. Please re-initialise")
 
-  const data = nordigenRequest('/api/v2/token/refresh/', {
+  const data = nordigenRequest<{access: string}>('/api/v2/token/refresh/', {
     method: 'post',
     headers: {
       "Content-Type": "application/json",
@@ -46,7 +48,7 @@ function getAccessToken() {
   return access;
 }
 
-function getReferenceValues(spreadsheet) {
+export function getReferenceValues(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
   return [
     'v_Today',
     'v_ReportableCategorySymbol',
@@ -69,10 +71,10 @@ function getReferenceValues(spreadsheet) {
       configurable: true,
     })
     return acc
-  }, {})
+  }, {} as Record<string, string|number|Date>)
 }
 
-function getReferenceRanges(spreadsheet) {
+export function getReferenceRanges(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
   return [
     'trx_Dates',
     'trx_Outflows',
@@ -101,5 +103,5 @@ function getReferenceRanges(spreadsheet) {
       configurable: true,
     })
     return acc
-  }, {})
+  }, {} as Record<string, GoogleAppsScript.Spreadsheet.Range>)
 }

@@ -1,10 +1,10 @@
-function onInstall(e) {
-  onOpen(e);
+export function onInstall() {
+  onOpen();
   // Perform additional setup as needed.
 }
 
-function onOpen(e) {
-  var menu = SpreadsheetApp.getUi().createAddonMenu()
+export function onOpen() {
+  SpreadsheetApp.getUi().createAddonMenu()
     .addItem('Initialise', 'initialise')
     .addItem('Load institutions', 'loadInstitutions')
     .addItem('Link an account', 'linkAccount')

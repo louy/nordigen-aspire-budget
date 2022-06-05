@@ -1,3 +1,6 @@
+import { scriptLock } from "../lock";
+import { ACCOUNTS_SHEET_NAME, getAccessToken, getReferenceRanges, nordigenRequest, REQUISITIONS_SHEET_NAME } from "../utils";
+
 function loadAccounts() { scriptLock(_loadAccounts) }
 function _loadAccounts() {
   // console.log('loadAccounts')
@@ -37,7 +40,9 @@ function _loadAccounts() {
 
   for (const [index, [id, status, institutionId]] of Object.entries(requisitions)) {
     if (!id) continue
-    const data = nordigenRequest('/api/v2/requisitions/'+encodeURIComponent(id)+'/', {
+    const data = nordigenRequest<{
+      accounts: string[]
+    }>('/api/v2/requisitions/'+encodeURIComponent(id)+'/', {
       headers: {
         Authorization: "Bearer " + accessToken,
       },
@@ -47,7 +52,7 @@ function _loadAccounts() {
 
     if (data.accounts) {
       accounts.push(
-        ...data.accounts.map(accountId => ({id: accountId, requisitionId: id, institutionId}))
+        ...data.accounts.map((accountId:string) => ({id: accountId, requisitionId: id, institutionId}))
       )
     }
   }
@@ -58,7 +63,15 @@ function _loadAccounts() {
         Authorization: "Bearer " + accessToken,
       },
     })
-    const {balances} = nordigenRequest('/api/v2/accounts/'+encodeURIComponent(accountId)+'/balances/', {
+    const {balances} = nordigenRequest<
+      {
+        balances: {
+          balanceAmount: {amount: number,},
+          referenceDate: string,
+          balanceType: string,
+        }[]
+      }
+    >('/api/v2/accounts/'+encodeURIComponent(accountId)+'/balances/', {
       headers: {
         Authorization: "Bearer " + accessToken,
       },
@@ -91,10 +104,13 @@ function _loadAccounts() {
   formatAccountsTable(spreadsheet, accountsSheet)
 }
 
-function updateAccount(accountsSheet, {
+function updateAccount(accountsSheet: GoogleAppsScript.Spreadsheet.Sheet, {
   id, details, lastFetched, lastBalance, lastBalanceDate,
   currency, displayName, product, ownerName, bban, maskedPan, institutionId,
-}) {
+}: Partial<{
+  id: string, details: string, lastFetched: string, lastBalance: number, lastBalanceDate: string,
+  currency: string, displayName: string, product: string, ownerName: string, bban: string, maskedPan: string, institutionId: string,
+}>) {
   const rowNumber = getRowForAccount(accountsSheet, id);
   const row = accountsSheet.getRange(rowNumber, 2, 1, 12).getValues()[0];
   
@@ -108,7 +124,7 @@ function updateAccount(accountsSheet, {
   accountsSheet.getRange(rowNumber, 2, 1, 12).setValues([row]);
 }
 
-function getRowForAccount(accountsSheet, accountId) {
+function getRowForAccount(accountsSheet:GoogleAppsScript.Spreadsheet.Sheet, accountId: string):number {
   const ids = accountsSheet.getRange(2, 2, accountsSheet.getLastRow()-1 || 1, 1).getValues().map(([cell]) => cell).concat(['']);
 
   let idx = ids.indexOf(accountId)
@@ -127,7 +143,7 @@ function getRowForAccount(accountsSheet, accountId) {
   return idx + 2;
 }
 
-function formatAccountsTable(spreadsheet, accountsSheet) {
+function formatAccountsTable(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet, accountsSheet: GoogleAppsScript.Spreadsheet.Sheet) {
   const {
     trx_Dates,
   } = getReferenceRanges(spreadsheet);
@@ -163,7 +179,7 @@ function formatAccountsTable(spreadsheet, accountsSheet) {
   date.copyFormatToRange(accountsSheet.getSheetId(), 6, 6, 2, Math.max(2, accountsSheet.getLastRow()))
 }
 
-function getAccounts(accountsSheet) {
+function getAccounts(accountsSheet:GoogleAppsScript.Spreadsheet.Sheet) {
   const data = accountsSheet.getRange(
     2, 1, 
     accountsSheet.getLastRow()-1 || 1, 13

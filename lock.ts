@@ -1,4 +1,4 @@
-function scriptLock(fn) {
+export function scriptLock<T extends Function>(fn: T) {
   const lock = LockService.getScriptLock()
   if (!lock.tryLock(1000)) {
     const ui = SpreadsheetApp.getUi();
@@ -12,7 +12,7 @@ function scriptLock(fn) {
   }
 }
 
-function documentLock(fn) {
+export function documentLock<T extends Function>(fn: T) {
   const lock = LockService.getDocumentLock()
   if (!lock.tryLock(1000)) {
     const ui = SpreadsheetApp.getUi();

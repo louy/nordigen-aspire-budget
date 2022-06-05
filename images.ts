@@ -1,12 +1,13 @@
-/** @param image {SpreadsheetApp.OverGridImage} */
-function fitImage(image, maxWidth, maxHeight) {
+function fitImage(
+  image: GoogleAppsScript.Spreadsheet.OverGridImage, 
+  maxWidth: number, 
+  maxHeight: number,
+) {
   const inherentWidth = image.getInherentWidth();
   const inherentHeight = image.getInherentHeight();
 
   let width = inherentWidth
   let height = inherentHeight
-
-  const ratio = width / height
 
   if (width > maxWidth) {
     width = maxWidth

@@ -1,4 +1,7 @@
-function initialise() { scriptLock(_initialise) }
+import { scriptLock } from "../lock";
+import { CONFIG_SHEET_NAME, REFRESH_TOKEN_KEY, _setConfig } from "../utils";
+
+export function initialise() { scriptLock(_initialise) }
 function _initialise() {
   console.log('initialise')
 
@@ -15,7 +18,7 @@ function _initialise() {
       case ui.Button.CLOSE:
         return
       case ui.Button.YES:
-        config = void 0
+        _setConfig(void 0);
         spreadsheet.deleteSheet(configSheet)
         break;
     }
