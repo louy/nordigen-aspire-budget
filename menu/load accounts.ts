@@ -110,7 +110,7 @@ function _loadAccounts() {
 
   for (const { id: accountId, institutionId } of accounts) {
     try {
-      const { account } = nordigenRequest(
+      const { account } = nordigenRequest<any>(
         "/api/v2/accounts/" + encodeURIComponent(accountId) + "/details/",
         {
           headers: {

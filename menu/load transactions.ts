@@ -97,7 +97,7 @@ function _loadTransactions() {
 
   for (const { id: accountId, name: accountName, institutionId } of accounts) {
     if (needGracefulShutdown()) return;
-    const { account } = nordigenRequest(
+    const { account } = nordigenRequest<any>(
       "/api/v2/accounts/" + encodeURIComponent(accountId) + "/details/",
       {
         headers: {
@@ -191,13 +191,13 @@ function _loadTransactions() {
       today
     );
 
-    const { transactions } = nordigenRequest(
+    const { transactions } = nordigenRequest<any>(
       "/api/v2/accounts/" +
-        encodeURIComponent(accountId) +
-        "/transactions/?date_from=" +
-        encodeURIComponent(startDate) +
-        "&date_to=" +
-        encodeURIComponent(endDate),
+      encodeURIComponent(accountId) +
+      "/transactions/?date_from=" +
+      encodeURIComponent(startDate) +
+      "&date_to=" +
+      encodeURIComponent(endDate),
       {
         headers: {
           Authorization: "Bearer " + accessToken,
