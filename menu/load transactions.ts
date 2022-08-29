@@ -193,11 +193,11 @@ function _loadTransactions() {
 
     const { transactions } = nordigenRequest<any>(
       "/api/v2/accounts/" +
-      encodeURIComponent(accountId) +
-      "/transactions/?date_from=" +
-      encodeURIComponent(startDate) +
-      "&date_to=" +
-      encodeURIComponent(endDate),
+        encodeURIComponent(accountId) +
+        "/transactions/?date_from=" +
+        encodeURIComponent(startDate) +
+        "&date_to=" +
+        encodeURIComponent(endDate),
       {
         headers: {
           Authorization: "Bearer " + accessToken,

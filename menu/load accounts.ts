@@ -15,22 +15,26 @@ interface Account {
   status: string;
   message: string;
 }
-const columns: { key: keyof Account; label: string }[] = [
-  { key: "name", label: "Name" },
-  { key: "id", label: "ID" },
-  { key: "details", label: "Account Details" },
-  { key: "lastFetched", label: "Last fetched" },
-  { key: "lastBalance", label: "Last balance" },
-  { key: "lastBalanceDate", label: "Last balance date" },
-  { key: "currency", label: "Currency" },
-  { key: "displayName", label: "Display name" },
-  { key: "product", label: "Product" },
-  { key: "ownerName", label: "Owner name" },
-  { key: "bban", label: "BBAN" },
-  { key: "maskedPan", label: "Masked PAN" },
-  { key: "institutionId", label: "Instutition ID" },
-  { key: "status", label: "Status" },
-  { key: "message", label: "Message" },
+const columns: {
+  key: keyof Account;
+  label: string;
+  format: "text" | "money" | "date";
+}[] = [
+  { key: "name", label: "Name", format: "text" },
+  { key: "id", label: "ID", format: "text" },
+  { key: "details", label: "Account Details", format: "text" },
+  { key: "status", label: "Status", format: "text" },
+  { key: "message", label: "Message", format: "text" },
+  { key: "lastFetched", label: "Last fetched", format: "date" },
+  { key: "lastBalance", label: "Last balance", format: "money" },
+  { key: "lastBalanceDate", label: "Last balance date", format: "date" },
+  { key: "currency", label: "Currency", format: "text" },
+  { key: "displayName", label: "Display name", format: "text" },
+  { key: "product", label: "Product", format: "text" },
+  { key: "ownerName", label: "Owner name", format: "text" },
+  { key: "bban", label: "BBAN", format: "text" },
+  { key: "maskedPan", label: "Masked PAN", format: "text" },
+  { key: "institutionId", label: "Instutition ID", format: "text" },
 ];
 
 function loadAccounts() {
@@ -64,6 +68,10 @@ function _loadAccounts() {
     formatAccountsTable(spreadsheet, accountsSheet);
     spreadsheet.setActiveSheet(activeSheet);
     accountsSheet.hideSheet();
+  } else {
+    accountsSheet
+      .getRange(1, 1, 1, columns.length)
+      .setValues([columns.map((h) => h.label)]);
   }
 
   // console.log({accessToken})
@@ -249,34 +257,20 @@ function formatAccountsTable(
   const money = spreadsheet.getSheetByName("Balances").getRange("D8:D8");
   const date = spreadsheet.getSheetByName("Balances").getRange("B8:B8");
   const text = spreadsheet.getSheetByName("Balances").getRange("E8:E8");
-  text.copyFormatToRange(
-    accountsSheet.getSheetId(),
-    1,
-    columns.length,
-    2,
-    Math.max(2, accountsSheet.getLastRow())
-  );
-  date.copyFormatToRange(
-    accountsSheet.getSheetId(),
-    4,
-    4,
-    2,
-    Math.max(2, accountsSheet.getLastRow())
-  );
-  money.copyFormatToRange(
-    accountsSheet.getSheetId(),
-    5,
-    5,
-    2,
-    Math.max(2, accountsSheet.getLastRow())
-  );
-  date.copyFormatToRange(
-    accountsSheet.getSheetId(),
-    6,
-    6,
-    2,
-    Math.max(2, accountsSheet.getLastRow())
-  );
+
+  columns.forEach(({ format }, index) => {
+    let source = text;
+    if (format === "money") source = money;
+    if (format === "date") source = date;
+
+    source.copyFormatToRange(
+      accountsSheet.getSheetId(),
+      index + 1,
+      index + 1,
+      2,
+      Math.max(2, accountsSheet.getLastRow())
+    );
+  });
 }
 
 function getAccounts(accountsSheet: GoogleAppsScript.Spreadsheet.Sheet) {
