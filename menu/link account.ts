@@ -1,93 +1,104 @@
-function linkAccount() { scriptLock(_linkAccount) }
+function linkAccount() {
+  scriptLock(_linkAccount);
+}
 function _linkAccount() {
   const ui = SpreadsheetApp.getUi();
-  
+
   let result = ui.prompt(
-      'Please enter the institution ID:',
-      ui.ButtonSet.OK_CANCEL);
+    "Please enter the institution ID:",
+    ui.ButtonSet.OK_CANCEL
+  );
 
   var button = result.getSelectedButton();
   var text = result.getResponseText();
   if (button == ui.Button.CANCEL || button == ui.Button.CLOSE) {
-    return
+    return;
   }
 
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-  let requisitionsSheet = spreadsheet.getSheetByName(REQUISITIONS_SHEET_NAME)
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let requisitionsSheet = spreadsheet.getSheetByName(REQUISITIONS_SHEET_NAME);
 
   if (!requisitionsSheet) {
     let activeSheet = spreadsheet.getActiveSheet();
-    requisitionsSheet = spreadsheet.insertSheet().setName(REQUISITIONS_SHEET_NAME)
+    requisitionsSheet = spreadsheet
+      .insertSheet()
+      .setName(REQUISITIONS_SHEET_NAME);
     spreadsheet.setActiveSheet(requisitionsSheet);
     spreadsheet.moveActiveSheet(spreadsheet.getNumSheets());
-    requisitionsSheet.appendRow(['ID', 'Status', 'Institution ID'])
+    requisitionsSheet.appendRow(["ID", "Status", "Institution ID"]);
     spreadsheet.setActiveSheet(activeSheet);
     requisitionsSheet.hideSheet();
   }
 
   const accessToken = getAccessToken();
-  console.log({accessToken})
-  
-  let agreementData: {id: string} | null;
+  console.log({ accessToken });
+
+  let agreementData: { id: string } | null;
   {
     // Create an agreement for max access
-    const institutionsSheet = spreadsheet.getSheetByName(INSTITUTIONS_SHEET_NAME)!;
-    const institutionIdx = institutionsSheet.getRange(2, 1, institutionsSheet.getLastRow(), 1).getValues().map(([cell])=>cell)
+    const institutionsSheet = spreadsheet.getSheetByName(
+      INSTITUTIONS_SHEET_NAME
+    )!;
+    const institutionIdx = institutionsSheet
+      .getRange(2, 1, institutionsSheet.getLastRow(), 1)
+      .getValues()
+      .map(([cell]) => cell)
       .indexOf(text);
 
     if (institutionIdx) {
-      const max_historical_days = institutionsSheet.getRange(institutionIdx + 2, 3, 1, 1).getValue();
+      const max_historical_days = institutionsSheet
+        .getRange(institutionIdx + 2, 3, 1, 1)
+        .getValue();
       const access_valid_for_days = 90;
 
-      console.log({max_historical_days, institutionIdx, text});
+      console.log({ max_historical_days, institutionIdx, text });
 
-      agreementData = nordigenRequest('/api/v2/agreements/enduser/', {
-        method: 'post',
+      agreementData = nordigenRequest("/api/v2/agreements/enduser/", {
+        method: "post",
         headers: {
-          'Authorization': 'Bearer '+accessToken,
-          'Content-Type': 'application/json',
+          Authorization: "Bearer " + accessToken,
+          "Content-Type": "application/json",
         },
         payload: JSON.stringify({
           institution_id: text,
-          max_historical_days, 
-          access_valid_for_days, 
-          access_scope: [
-            "balances",
-            "details",
-            "transactions",
-          ],
-        })
-      })
+          max_historical_days,
+          access_valid_for_days,
+          access_scope: ["balances", "details", "transactions"],
+        }),
+      });
     }
   }
 
-  console.log({agreementData});
+  console.log({ agreementData });
 
   const data = nordigenRequest<{
-    id: string,
-    status: string,
-  }>('/api/v2/requisitions/', {
-    method: 'post',
+    id: string;
+    status: string;
+  }>("/api/v2/requisitions/", {
+    method: "post",
     headers: {
-      'Authorization': 'Bearer '+accessToken,
-      'Content-Type': 'application/json',
+      Authorization: "Bearer " + accessToken,
+      "Content-Type": "application/json",
     },
     payload: JSON.stringify({
       institution_id: text,
       redirect: spreadsheet.getUrl(),
       agreement: agreementData?.id,
-    })
+    }),
   });
 
-  console.log({data})
+  console.log({ data });
 
   requisitionsSheet.appendRow([data.id, data.status, text]);
 
-  const htmlOutput = Object.assign(HtmlService
-    .createTemplate('Go to <a target="_blank" href="<?= data.link ?>">this link</a> to authenticate your account.<br>Once you\'re done come back here and you will be able to load your account transactions.<br>If the link doesnt work you can copy it and paste it in your browser:<pre><a target="_blank" href="<?=data.link?>"><?=data.link?></a></pre>'),
-    {data})
+  const htmlOutput = Object.assign(
+    HtmlService.createTemplate(
+      'Go to <a target="_blank" href="<?= data.link ?>">this link</a> to authenticate your account.<br>Once you\'re done come back here and you will be able to load your account transactions.<br>If the link doesnt work you can copy it and paste it in your browser:<pre><a target="_blank" href="<?=data.link?>"><?=data.link?></a></pre>'
+    ),
+    { data }
+  )
     .evaluate()
     .setWidth(450)
     .setHeight(250);
-  ui.showModalDialog(htmlOutput, 'Authenticate with your bank');
+  ui.showModalDialog(htmlOutput, "Authenticate with your bank");
 }
