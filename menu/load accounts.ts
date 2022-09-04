@@ -178,7 +178,7 @@ function _loadAccounts() {
         id: accountId,
         institutionId,
         status: "ERROR",
-        message: error.message,
+        message: error.detail || error.message,
       });
     }
   }

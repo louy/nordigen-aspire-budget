@@ -97,25 +97,36 @@ function _loadTransactions() {
 
   for (const { id: accountId, name: accountName, institutionId } of accounts) {
     if (needGracefulShutdown()) return;
-    const { account } = nordigenRequest<any>(
-      "/api/v2/accounts/" + encodeURIComponent(accountId) + "/details/",
-      {
+    let account, balances;
+    try {
+      ({ account } = nordigenRequest<any>(
+        "/api/v2/accounts/" + encodeURIComponent(accountId) + "/details/",
+        {
+          headers: {
+            Authorization: "Bearer " + accessToken,
+          },
+        }
+      ));
+      ({ balances } = nordigenRequest<{
+        balances: {
+          balanceAmount: { amount: string };
+          referenceDate: string;
+          balanceType: string;
+        }[];
+      }>("/api/v2/accounts/" + encodeURIComponent(accountId) + "/balances/", {
         headers: {
           Authorization: "Bearer " + accessToken,
         },
-      }
-    );
-    const { balances } = nordigenRequest<{
-      balances: {
-        balanceAmount: { amount: string };
-        referenceDate: string;
-        balanceType: string;
-      }[];
-    }>("/api/v2/accounts/" + encodeURIComponent(accountId) + "/balances/", {
-      headers: {
-        Authorization: "Bearer " + accessToken,
-      },
-    });
+      }));
+    } catch (error) {
+      // Update account status
+      updateAccount(accountsSheet, {
+        id: accountId,
+        status: "ERROR",
+        message: error.detail || error.message,
+      });
+      continue;
+    }
 
     let balance = balances.find(
       ({ balanceType }) => balanceType === "interimCleared"

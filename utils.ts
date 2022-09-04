@@ -1,105 +1,135 @@
-const CONFIG_SHEET_NAME = 'NordigenData'
-const REFRESH_TOKEN_KEY = 'Refresh token'
+const CONFIG_SHEET_NAME = "NordigenData";
+const REFRESH_TOKEN_KEY = "Refresh token";
 
-const INSTITUTIONS_SHEET_NAME = 'NordigenInstitutions'
-const REQUISITIONS_SHEET_NAME = 'NordigenRequisitions'
-const ACCOUNTS_SHEET_NAME = 'NordigenAccounts'
+const INSTITUTIONS_SHEET_NAME = "NordigenInstitutions";
+const REQUISITIONS_SHEET_NAME = "NordigenRequisitions";
+const ACCOUNTS_SHEET_NAME = "NordigenAccounts";
 
-let config: [string, string][]
+let config: [string, string][];
 
-function nordigenRequest<T extends {}>(url: string, {headers, ...options}: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions): T {
+function nordigenRequest<T extends {}>(
+  url: string,
+  { headers, ...options }: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions
+): T {
   const request = UrlFetchApp.fetch("https://ob.nordigen.com" + url, {
     ...options,
     headers: {
       accept: "application/json",
       ...headers,
     },
+    muteHttpExceptions: true,
   });
-  const data = JSON.parse(request.getContentText());
-  return data
+  let data;
+  try {
+    data = JSON.parse(request.getContentText());
+  } catch (error) {
+    throw new Error(
+      "Unexpected response from the server. Code " + request.getResponseCode()
+    );
+  }
+  if (request.getResponseCode() >= 400) {
+    throw Object.assign(
+      new Error("Unexpected server error. Code " + request.getResponseCode()),
+      { statusCode: request.getResponseCode() },
+      data
+    );
+  }
+  return data;
 }
 
 function getAccessToken() {
   if (!config) {
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-    const configSheet = spreadsheet.getSheetByName('NordigenData')
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const configSheet = spreadsheet.getSheetByName("NordigenData");
 
     if (!configSheet) {
-      throw new Error("Nordigen integration has not been initialised. Please initialise first.")
+      throw new Error(
+        "Nordigen integration has not been initialised. Please initialise first."
+      );
     }
 
-    config = configSheet.getSheetValues(1, 1, configSheet.getLastRow(), 2) as string[][] as typeof config
+    config = configSheet.getSheetValues(
+      1,
+      1,
+      configSheet.getLastRow(),
+      2
+    ) as string[][] as typeof config;
   }
 
-  const refreshToken = config.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1]
-  if (!refreshToken) throw new Error("Missing refresh token from data. Please re-initialise")
+  const refreshToken = config.find(([key]) => key === REFRESH_TOKEN_KEY)?.[1];
+  if (!refreshToken)
+    throw new Error("Missing refresh token from data. Please re-initialise");
 
-  const data = nordigenRequest<{access: string}>('/api/v2/token/refresh/', {
-    method: 'post',
+  const data = nordigenRequest<{ access: string }>("/api/v2/token/refresh/", {
+    method: "post",
     headers: {
       "Content-Type": "application/json",
     },
-    payload: JSON.stringify({refresh:refreshToken}),
+    payload: JSON.stringify({ refresh: refreshToken }),
   });
   // console.log({data})
-  const {access} = data
+  const { access } = data;
   return access;
 }
 
-function getReferenceValues(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+function getReferenceValues(
+  spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
+) {
   return [
-    'v_Today',
-    'v_ReportableCategorySymbol',
-    'v_NonReportableCategorySymbol',
-    'v_DebtAccountSymbol',
-    'v_CategoryGroupSymbol',
-    'v_ApprovedSymbol',
-    'v_PendingSymbol',
-    'v_BreakSymbol',
-    'v_AccountTransfer',
-    'v_BalanceAdjustment',
-    'v_StartingBalance'
+    "v_Today",
+    "v_ReportableCategorySymbol",
+    "v_NonReportableCategorySymbol",
+    "v_DebtAccountSymbol",
+    "v_CategoryGroupSymbol",
+    "v_ApprovedSymbol",
+    "v_PendingSymbol",
+    "v_BreakSymbol",
+    "v_AccountTransfer",
+    "v_BalanceAdjustment",
+    "v_StartingBalance",
   ].reduce((acc, name) => {
     Object.defineProperty(acc, name, {
       get() {
-        const value = spreadsheet.getRangeByName(name).getValue()
-        Object.defineProperty(acc, name, {value})
+        const value = spreadsheet.getRangeByName(name).getValue();
+        Object.defineProperty(acc, name, { value });
         return value;
       },
       configurable: true,
-    })
-    return acc
-  }, {} as Record<string, string|number|Date>)
+    });
+    return acc;
+  }, {} as Record<string, string | number | Date>);
 }
 
-function getReferenceRanges(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
+function getReferenceRanges(
+  spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet
+) {
   return [
-    'trx_Dates',
-    'trx_Outflows',
-    'trx_Inflows',
-    'trx_Categories',
-    'trx_Accounts',
-    'trx_Statuses',
-    'trx_Memos',
-    'trx_Uuids',
-    'ntw_Dates',
-    'ntw_Amounts',
-    'ntw_Categories',
-    'cts_Dates',
-    'cts_Amounts',
-    'cts_FromCategories',
-    'cts_ToCategories',
-    'cfg_Accounts',
-    'cfg_Cards',
+    "trx_Dates",
+    "trx_Outflows",
+    "trx_Inflows",
+    "trx_Categories",
+    "trx_Accounts",
+    "trx_Statuses",
+    "trx_Memos",
+    "trx_Uuids",
+    "ntw_Dates",
+    "ntw_Amounts",
+    "ntw_Categories",
+    "cts_Dates",
+    "cts_Amounts",
+    "cts_FromCategories",
+    "cts_ToCategories",
+    "cfg_Accounts",
+    "cfg_Cards",
   ].reduce((acc, name) => {
     Object.defineProperty(acc, name, {
       get() {
-        const value = spreadsheet.getRangeByName(name)
-        Object.defineProperty(acc, name, {value})
+        const value = spreadsheet.getRangeByName(name);
+        Object.defineProperty(acc, name, { value });
         return value;
       },
       configurable: true,
-    })
-    return acc
-  }, {} as Record<string, GoogleAppsScript.Spreadsheet.Range>)
+    });
+    return acc;
+  }, {} as Record<string, GoogleAppsScript.Spreadsheet.Range>);
 }
