@@ -1,22 +1,30 @@
 function formatDate(date: Date) {
-  return Utilities.formatDate(date, SpreadsheetApp.getActive().getSpreadsheetTimeZone(), "yyyy-MM-dd")
+  return Utilities.formatDate(
+    date,
+    SpreadsheetApp.getActive().getSpreadsheetTimeZone(),
+    "yyyy-MM-dd"
+  );
 }
 
 function parseDate(date: string) {
-  let [year, month, day] = date.split('-')
+  let [year, month, day] = date.split("-");
   return new Date(+year, +month - 1, +day, 0, 0, 0, 0);
 }
 
 function addDays(date: Date, days: number) {
-  date.setDate(date.getDate() + days)
-  return date
+  date.setDate(date.getDate() + days);
+  return date;
 }
 
 function maxDate(...args: string[]) {
-  return formatDate(new Date(Math.max(...args.map(date=>+parseDate(date)))));
+  return formatDate(
+    new Date(Math.max(...args.map((date) => +parseDate(date))))
+  );
 }
 function minDate(...args: string[]) {
-  return formatDate(new Date(Math.min(...args.map(date=>+parseDate(date)))));
+  return formatDate(
+    new Date(Math.min(...args.map((date) => +parseDate(date))))
+  );
 }
 
 const _MS_PER_DAY = 1000 * 60 * 60 * 24;
